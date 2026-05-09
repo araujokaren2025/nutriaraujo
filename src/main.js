@@ -207,47 +207,161 @@ function renderPacientesListaContent() {
   `
 }
 
+// Utilities
+function formatTime(val) {
+  if (!val) return '';
+  const numStr = val.replace(/\D/g, '');
+  if (!numStr) return '';
+  if (numStr.length <= 2) {
+    let hours = parseInt(numStr);
+    if (hours > 23) hours = 23;
+    return `${hours.toString().padStart(2, '0')}:00`;
+  }
+  let hours = numStr.substring(0, numStr.length - 2);
+  let mins = numStr.substring(numStr.length - 2);
+  hours = parseInt(hours);
+  mins = parseInt(mins);
+  if (hours > 23) hours = 23;
+  if (mins > 59) mins = 59;
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+}
+
+function calculateIdade(dob) {
+  if (!dob) return '---';
+  const diff = Date.now() - new Date(dob).getTime();
+  const age = new Date(diff); 
+  return Math.abs(age.getUTCFullYear() - 1970) + ' anos';
+}
+
+function calculateIMC(peso, altura) {
+  if (!peso || !altura) return '---';
+  
+  // Converte virgula para ponto para garantir o parse correto
+  const p = parseFloat(peso.toString().replace(',', '.'));
+  let h = parseFloat(altura.toString().replace(',', '.'));
+  
+  if (isNaN(p) || isNaN(h)) return '---';
+  
+  // Lógica inteligente: se altura > 3, assume que está em cm e converte para metros
+  // Se for <= 3 (ex: 1,75), já assume que está em metros
+  if (h > 3) {
+    h = h / 100;
+  }
+  
+  const imc = p / (h * h);
+  return imc.toFixed(1).replace('.', ',');
+}
+
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => { clearTimeout(timeout); func(...args); };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+function renderPacienteForm(p = {}, isEdit = false) {
+  const isChecked = (arr, val) => (arr && arr.includes(val)) ? 'checked' : '';
+  const hasOutro = (arr, predefined) => arr && arr.some(v => !predefined.includes(v)) ? 'checked' : '';
+  const getOutroVal = (arr, predefined) => arr ? arr.find(v => !predefined.includes(v)) || '' : '';
+  
+  const objList = ['Emagrecer', 'Ganhar massa', 'Controlar diabetes', 'Saúde geral', 'Performance esportiva', 'Reeducação alimentar'];
+  const atvList = ['Sedentário', 'Levemente ativo', 'Moderadamente ativo', 'Muito ativo', 'Extremamente ativo'];
+  const patList = ['Nenhum', 'Diabetes', 'Hipertensão', 'Hipotireoidismo', 'Hipertireoidismo', 'Síndrome do ovário policístico', 'Doença celíaca', 'Colesterol alto'];
+  const restList = ['Nenhum', 'Lactose', 'Glúten', 'Açúcar', 'Carne vermelha', 'Frutos do mar'];
+  const alergList = ['Nenhum', 'Amendoim', 'Leite', 'Ovo', 'Soja', 'Trigo', 'Frutos do mar'];
+
+  return `
+    <div class="tabs">
+      <div class="tab-item ${state.currentTab === 'pessoal' ? 'active' : ''}" data-tab="pessoal">Pessoal</div>
+      <div class="tab-item ${state.currentTab === 'clinico' ? 'active' : ''}" data-tab="clinico">Clínico</div>
+      <div class="tab-item ${state.currentTab === 'habitos' ? 'active' : ''}" data-tab="habitos">Hábitos</div>
+    </div>
+    
+    <div id="section-pessoal" class="form-section ${state.currentTab === 'pessoal' ? 'active' : ''}">
+      <div class="form-grid">
+        <div class="form-group"><label>Nome Completo*</label><input type="text" name="nome" value="${p.nome||''}" /></div>
+        <div class="form-group"><label>Nascimento</label><input type="date" name="data_nascimento" id="dob_${isEdit?'edit':'new'}" value="${p.data_nascimento||''}" /></div>
+        <div class="form-group"><label>Idade</label><input type="text" id="idade_${isEdit?'edit':'new'}" readonly disabled value="${calculateIdade(p.data_nascimento)}"/></div>
+        <div class="form-group"><label>Sexo</label><select name="sexo">
+          <option value="">Selecione...</option>
+          <option ${p.sexo==='Feminino'?'selected':''}>Feminino</option>
+          <option ${p.sexo==='Masculino'?'selected':''}>Masculino</option>
+          <option ${p.sexo==='Outro'?'selected':''}>Outro</option>
+        </select></div>
+        <div class="form-group"><label>Telefone</label><input type="tel" name="telefone" value="${p.telefone||''}" /></div>
+        <div class="form-group"><label>WhatsApp</label><input type="tel" name="whatsapp" value="${p.whatsapp||''}" /></div>
+        <div class="form-group full-width"><label>Email</label><input type="email" name="email" value="${p.email||''}" /></div>
+      </div>
+    </div>
+    
+    <div id="section-clinico" class="form-section ${state.currentTab === 'clinico' ? 'active' : ''}">
+      <div class="form-grid">
+        <div class="form-group input-suffix"><label>Peso atual</label><input type="text" name="peso_inicial" id="weight_${isEdit?'edit':'new'}" placeholder="0,0" value="${(p.peso_inicial || '').toString().replace('.', ',')}"/><span>kg</span></div>
+        <div class="form-group input-suffix"><label>Altura</label><input type="text" name="altura" id="height_${isEdit?'edit':'new'}" placeholder="0,00" value="${(p.altura || '').toString().replace('.', ',')}"/><span>m</span></div>
+      </div>
+      <div class="imc-display"><span>IMC:</span> <span class="imc-value" id="imc-val_${isEdit?'edit':'new'}">---</span></div>
+      
+      <div class="form-group"><label>Objetivo</label><div class="checkbox-group">
+        ${objList.map(o => `<label class="checkbox-item"><input type="checkbox" name="objetivos" value="${o}" ${isChecked(p.objetivos, o)}> ${o}</label>`).join('')}
+      </div><input type="text" name="objetivo_texto" placeholder="Outro objetivo..." value="${p.objetivo_texto||''}" style="margin-top:10px;"/></div>
+      
+      <div class="form-group"><label>Nível de atividade física</label><select name="nivel_atividade">
+        <option value="">Selecione...</option>
+        ${atvList.map(a => `<option ${p.nivel_atividade===a?'selected':''}>${a}</option>`).join('')}
+      </select></div>
+
+      <div class="form-group"><label>Patologias ou condições</label><div class="checkbox-group">
+        ${patList.map(o => `<label class="checkbox-item"><input type="checkbox" name="patologias" value="${o}" ${isChecked(p.patologias, o)}> ${o}</label>`).join('')}
+      </div><input type="text" name="patologias_outro" placeholder="Outras patologias..." value="${getOutroVal(p.patologias, patList)}" style="margin-top:10px;"/></div>
+
+      <div class="form-group"><label>Restrições alimentares</label><div class="checkbox-group">
+        ${restList.map(o => `<label class="checkbox-item"><input type="checkbox" name="restricoes_alimentares" value="${o}" ${isChecked(p.restricoes_alimentares, o)}> ${o}</label>`).join('')}
+      </div><input type="text" name="restricoes_outro" placeholder="Outras restrições..." value="${getOutroVal(p.restricoes_alimentares, restList)}" style="margin-top:10px;"/></div>
+
+      <div class="form-group"><label>Alergias alimentares</label><div class="checkbox-group">
+        ${alergList.map(o => `<label class="checkbox-item"><input type="checkbox" name="alergias" value="${o}" ${isChecked(p.alergias, o)}> ${o}</label>`).join('')}
+      </div><input type="text" name="alergias_outro" placeholder="Outras alergias..." value="${getOutroVal(p.alergias, alergList)}" style="margin-top:10px;"/></div>
+
+      <div class="form-grid">
+        <div class="form-group"><label>Medicamentos contínuos</label><textarea name="medicamentos" rows="2">${p.medicamentos||''}</textarea></div>
+        <div class="form-group"><label>Suplementos em uso</label><textarea name="suplementos" rows="2">${p.suplementos||''}</textarea></div>
+      </div>
+    </div>
+    
+    <div id="section-habitos" class="form-section ${state.currentTab === 'habitos' ? 'active' : ''}">
+      <div class="form-grid">
+        <div class="form-group"><label>Refeições/dia</label><input type="text" name="refeicoes_por_dia" placeholder="0" value="${p.refeicoes_por_dia||''}"/></div>
+        <div class="form-group input-suffix"><label>Quantidade de água/dia</label><input type="text" name="litros_agua" placeholder="0,0" value="${(p.litros_agua||'').toString().replace('.', ',')}"/><span>litros</span></div>
+        <div class="form-group"><label>Horário que acorda</label><input type="text" name="horario_acorda" class="time-input" placeholder="ex: 06:00" value="${p.horario_acorda||''}"/></div>
+        <div class="form-group"><label>Horário que dorme</label><input type="text" name="horario_dorme" class="time-input" placeholder="ex: 23:00" value="${p.horario_dorme||''}"/></div>
+      </div>
+      
+      <div class="form-group" style="margin-top:15px;">
+        <label><input type="checkbox" name="atividade_fisica" id="atv_fisica_${isEdit?'edit':'new'}" ${p.atividade_fisica?'checked':''}> Pratica atividade física?</label>
+      </div>
+      <div class="form-group" id="atv_fisica_desc_container_${isEdit?'edit':'new'}" style="display: ${p.atividade_fisica?'block':'none'}">
+        <label>Qual atividade e frequência semanal?</label>
+        <textarea name="atividade_fisica_descricao" rows="2">${p.atividade_fisica_descricao||''}</textarea>
+      </div>
+      
+      <div class="form-group"><label>Observações gerais</label><textarea name="observacoes" rows="3">${p.observacoes||''}</textarea></div>
+    </div>
+  `
+}
+
 function renderPacientesNovoContent() {
   return `
     <header class="header">
       <h1>Cadastrar Novo Paciente</h1>
       <button id="btn-voltar" class="btn-secondary">&larr; Voltar</button>
     </header>
-    <div class="tabs">
-      <div class="tab-item ${state.currentTab === 'pessoal' ? 'active' : ''}" data-tab="pessoal">Pessoal</div>
-      <div class="tab-item ${state.currentTab === 'clinico' ? 'active' : ''}" data-tab="clinico">Clínico</div>
-      <div class="tab-item ${state.currentTab === 'habitos' ? 'active' : ''}" data-tab="habitos">Hábitos</div>
-    </div>
     <form id="paciente-form" class="form-container">
-      <div id="section-pessoal" class="form-section ${state.currentTab === 'pessoal' ? 'active' : ''}">
-        <div class="form-grid">
-          <div class="form-group"><label>Nome Completo*</label><input type="text" name="nome" id="nome-paciente" /></div>
-          <div class="form-group"><label>Nascimento</label><input type="date" name="data_nascimento" id="dob" /></div>
-          <div class="form-group"><label>Sexo</label><select name="sexo"><option value="">Selecione...</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select></div>
-          <div class="form-group"><label>Telefone</label><input type="tel" name="telefone" /></div>
-          <div class="form-group"><label>WhatsApp</label><input type="tel" name="whatsapp" /></div>
-          <div class="form-group"><label>Email</label><input type="email" name="email" /></div>
-        </div>
-      </div>
-      <div id="section-clinico" class="form-section ${state.currentTab === 'clinico' ? 'active' : ''}">
-        <div class="form-grid">
-          <div class="form-group input-suffix"><label>Peso</label><input type="number" step="0.1" name="peso_inicial" id="weight" /><span>kg</span></div>
-          <div class="form-group input-suffix"><label>Altura</label><input type="number" name="altura" id="height" /><span>cm</span></div>
-        </div>
-        <div class="imc-display"><span>IMC:</span> <span class="imc-value" id="imc-val">---</span></div>
-        <div class="form-group"><label>Objetivos</label><div class="checkbox-group">
-          ${['Emagrecer', 'Ganhar massa', 'Saúde', 'Performance'].map(o => `<label class="checkbox-item"><input type="checkbox" name="objetivos" value="${o}"> ${o}</label>`).join('')}
-        </div></div>
-      </div>
-      <div id="section-habitos" class="form-section ${state.currentTab === 'habitos' ? 'active' : ''}">
-        <div class="form-grid">
-          <div class="form-group"><label>Refeições/dia</label><input type="number" name="refeicoes_por_dia" /></div>
-          <div class="form-group"><label>Água/dia</label><input type="number" step="0.1" name="litros_agua" /></div>
-        </div>
-      </div>
+      ${renderPacienteForm()}
       <div class="actions-bar">
         <button type="button" id="btn-next" class="btn-primary">Próximo</button>
-        <button type="submit" id="btn-save" class="btn-primary" style="display:none;">Salvar</button>
+        <button type="button" id="btn-save-new" class="btn-primary" style="display:none;">Salvar Cadastro</button>
       </div>
     </form>
   `
@@ -263,78 +377,133 @@ function renderPacientePerfilContent() {
         <button id="btn-voltar-perfil" class="btn-secondary" style="padding:8px 15px; border-radius:8px; border:1px solid #ddd; background:white; cursor:pointer;">&larr; Voltar</button>
         <h1>${p.nome}</h1>
       </div>
-      <button id="btn-nova-consulta" class="btn-primary">+ Nova Consulta</button>
     </header>
-    <div class="perfil-grid">
-      <div class="perfil-card">
-        <h3>Informações Pessoais</h3>
-        <p><strong>Nascimento:</strong> ${p.data_nascimento || 'Não informado'}</p>
-        <p><strong>Sexo:</strong> ${p.sexo || 'Não informado'}</p>
-        <p><strong>Telefone:</strong> ${p.telefone || 'Não informado'}</p>
-        <p><strong>WhatsApp:</strong> ${p.whatsapp || 'Não informado'}</p>
-        <p><strong>Email:</strong> ${p.email || 'Não informado'}</p>
+    
+    <!-- DADOS DO PACIENTE -->
+    <div class="perfil-card">
+      <h3 style="margin-bottom:20px;">Dados do Paciente</h3>
+      <form id="paciente-edit-form">
+        ${renderPacienteForm(p, true)}
+        <div class="actions-bar">
+          <button type="button" id="btn-next-edit" class="btn-primary">Próximo</button>
+          <button type="button" id="btn-save-edit" class="btn-primary" style="display:none;">Salvar Alterações</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- CONSULTAS -->
+    <div class="perfil-card" style="margin-top: 25px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <h3>Consultas</h3>
+        <button id="btn-nova-consulta" class="btn-primary" style="width:auto; padding:8px 15px;">+ Nova Consulta</button>
       </div>
-      <div class="perfil-card">
-        <h3>Dados Clínicos & Hábitos</h3>
-        <p><strong>Peso Inicial:</strong> ${p.peso_inicial ? p.peso_inicial + ' kg' : 'Não informado'}</p>
-        <p><strong>Altura:</strong> ${p.altura ? p.altura + ' cm' : 'Não informado'}</p>
-        <p><strong>Objetivos:</strong> ${p.objetivos?.join(', ') || 'Nenhum'}</p>
-        <p><strong>Refeições/dia:</strong> ${p.refeicoes_por_dia || 'Não informado'}</p>
-        <p><strong>Água/dia:</strong> ${p.litros_agua ? p.litros_agua + ' L' : 'Não informado'}</p>
+      
+      <div class="chart-container">
+        <canvas id="weightChart"></canvas>
+      </div>
+
+      <div class="timeline">
+        ${state.consultasPaciente.length > 0
+          ? state.consultasPaciente.map(c => {
+            const dataCons = new Date(c.data_consulta + 'T00:00:00')
+            return `
+            <div class="timeline-item">
+              <div class="timeline-date">${dataCons.toLocaleDateString('pt-BR')}</div>
+              <div class="timeline-content">
+                <p><strong>Peso:</strong> ${c.peso ? c.peso + ' kg' : '-'}</p>
+                <p><strong>Cintura:</strong> ${c.cintura ? c.cintura + ' cm' : '-'}</p>
+                <p><strong>Quadril:</strong> ${c.quadril ? c.quadril + ' cm' : '-'}</p>
+                <p><strong>Gordura:</strong> ${c.percentual_gordura ? c.percentual_gordura + '%' : '-'}</p>
+                <p><strong>Retorno:</strong> ${c.proximo_retorno ? new Date(c.proximo_retorno + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</p>
+                <p style="grid-column: 1 / -1;"><strong>Obs:</strong> ${c.observacoes || '-'}</p>
+              </div>
+            </div>
+          `}).join('')
+          : '<p style="text-align:center; padding:20px; color:#888;">Nenhuma consulta registrada ainda.</p>'
+        }
       </div>
     </div>
+
+    <!-- PLANOS ALIMENTARES -->
     <div class="perfil-card" style="margin-top: 25px;">
-      <h3>Histórico de Consultas</h3>
-      <table class="patients-table">
-        <thead><tr><th>Data</th><th>Status</th><th>Observações</th></tr></thead>
-        <tbody>
-          ${state.consultasPaciente.length > 0
-            ? state.consultasPaciente.map(c => {
-              // Verifica se a data da consulta é no futuro/hoje (Agendada) ou no passado (Realizada)
-              // Em JS o fuso pode afetar, mas para simplificar pegamos a data UTC local
-              const hoje = new Date()
-              hoje.setHours(0,0,0,0)
-              const [ano, mes, dia] = c.data_consulta.split('-')
-              const dataCons = new Date(ano, mes - 1, dia)
-              const isAgendada = dataCons >= hoje
-              const statusStr = isAgendada ? 'Agendada' : 'Realizada'
-              
-              return `
-              <tr>
-                <td><strong>${dataCons.toLocaleDateString('pt-BR')}</strong></td>
-                <td><span class="status-badge ${isAgendada ? 'agendada' : 'realizada'}">${statusStr}</span></td>
-                <td>${c.observacoes || '-'}</td>
-              </tr>
-            `}).join('')
-            : '<tr><td colspan="3" style="text-align:center; padding:20px;">Nenhuma consulta registrada.</td></tr>'
-          }
-        </tbody>
-      </table>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <h3>Planos Alimentares</h3>
+        <button id="btn-gerar-plano" class="btn-primary" style="width:auto; padding:8px 15px;">Gerar Plano Alimentar</button>
+      </div>
+      <div class="plan-history">
+        <p style="text-align:center; padding:20px; color:#888;">Nenhum plano alimentar gerado ainda.</p>
+      </div>
     </div>
 
     <!-- Modal Nova Consulta -->
     <div id="modal-consulta" class="modal">
-      <div class="modal-content" style="max-width: 400px;">
+      <div class="modal-content" style="max-width: 500px;">
         <span class="close-modal-consulta" style="position:absolute; right:15px; top:15px; cursor:pointer; font-size:1.5rem;">&times;</span>
-        <h2>Agendar Consulta</h2>
+        <h2 style="margin-bottom:20px; color:#333;">Registrar Consulta</h2>
         <form id="form-consulta">
-          <div class="form-group"><label>Data</label><input type="date" name="data_consulta" required /></div>
-          <div class="form-group">
-            <label>Tipo</label>
-            <select name="tipo">
-              <option>Primeira Vez</option>
-              <option>Retorno</option>
-            </select>
+          <div class="form-grid">
+            <div class="form-group"><label>Data da Consulta</label><input type="date" name="data_consulta" required value="${new Date().toISOString().split('T')[0]}" /></div>
+            <div class="form-group input-suffix"><label>Peso atual</label><input type="text" name="peso" required placeholder="0,0" /><span>kg</span></div>
+            <div class="form-group input-suffix"><label>Cintura (opcional)</label><input type="text" name="cintura" placeholder="0,0" /><span>cm</span></div>
+            <div class="form-group input-suffix"><label>Quadril (opcional)</label><input type="text" name="quadril" placeholder="0,0" /><span>cm</span></div>
+            <div class="form-group input-suffix"><label>% Gordura (opcional)</label><input type="text" name="percentual_gordura" placeholder="0,0" /><span>%</span></div>
+            <div class="form-group"><label>Próximo Retorno</label><input type="date" name="proximo_retorno" /></div>
           </div>
-          <div class="form-group">
-            <label>Observações</label>
-            <textarea name="observacoes" rows="3"></textarea>
-          </div>
-          <button type="submit" class="btn-primary" style="width:100%; justify-content:center;">Salvar Consulta</button>
+          <div class="form-group"><label>Observações</label><textarea name="observacoes" rows="3"></textarea></div>
+          <button type="submit" class="btn-primary" style="width:100%;">Salvar consulta</button>
         </form>
       </div>
     </div>
   `
+}
+
+let weightChartInstance = null;
+function initWeightChart() {
+  const canvas = document.getElementById('weightChart');
+  if (!canvas) return;
+  if (weightChartInstance) {
+    weightChartInstance.destroy();
+  }
+
+  const consultas = [...state.consultasPaciente].reverse(); // cronológica
+  if (consultas.length === 0) {
+    const ctx = canvas.getContext('2d');
+    ctx.font = '14px Inter';
+    ctx.fillStyle = '#999';
+    ctx.textAlign = 'center';
+    ctx.fillText('Nenhuma consulta registrada ainda', canvas.width/2, canvas.height/2);
+    return;
+  }
+
+  const labels = consultas.map(c => {
+    const [y,m,d] = c.data_consulta.split('-');
+    return `${d}/${m}/${y}`;
+  });
+  const data = consultas.map(c => c.peso);
+
+  weightChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Evolução de Peso (kg)',
+        data,
+        borderColor: '#2ed573',
+        backgroundColor: 'rgba(46, 213, 115, 0.1)',
+        borderWidth: 2,
+        tension: 0.3,
+        fill: true,
+        pointBackgroundColor: '#2bad5d'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: false }
+      }
+    }
+  });
 }
 
 function attachSystemListeners() {
@@ -356,11 +525,59 @@ function attachSystemListeners() {
   if (state.view === 'pacientes-lista') {
     document.getElementById('btn-novo-paciente').onclick = () => navigate('pacientes-novo')
     const search = document.getElementById('search-input')
-    if (search) search.oninput = (e) => { state.searchTerm = e.target.value; debounce(() => loadPacientes(state.searchTerm), 500)(); }
+    if (search) {
+      const debouncedLoad = debounce(() => loadPacientes(state.searchTerm), 500);
+      search.oninput = (e) => { state.searchTerm = e.target.value; debouncedLoad(); }
+    }
     
     document.querySelectorAll('.patient-row').forEach(row => {
       row.onclick = () => loadPacientePerfil(row.dataset.id)
     })
+  }
+
+  // Comum para formulários (Abas, Cálculos, Formatações)
+  const setupFormEvents = (mode) => {
+    const tabs = document.querySelectorAll('.tab-item')
+    const sections = document.querySelectorAll('.form-section')
+    const btnNext = document.getElementById(mode === 'new' ? 'btn-next' : 'btn-next-edit')
+    const btnSave = document.getElementById(mode === 'new' ? 'btn-save-new' : 'btn-save-edit')
+    
+    const switchTab = (name) => {
+      state.currentTab = name
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name))
+      sections.forEach(s => s.classList.toggle('active', s.id === `section-${name}`))
+      if (btnNext && btnSave) {
+        btnNext.style.display = name === 'habitos' ? 'none' : 'flex'
+        btnSave.style.display = name === 'habitos' ? 'flex' : 'none'
+      }
+    }
+    tabs.forEach(t => t.onclick = () => switchTab(t.dataset.tab))
+    if (btnNext) {
+      btnNext.onclick = () => {
+        if (state.currentTab === 'pessoal') switchTab('clinico')
+        else if (state.currentTab === 'clinico') switchTab('habitos')
+      }
+    }
+
+    // IMC
+    const w = document.getElementById(`weight_${mode}`), h = document.getElementById(`height_${mode}`), imcVal = document.getElementById(`imc-val_${mode}`);
+    if (w && h && imcVal) { const up = () => { imcVal.innerText = calculateIMC(w.value, h.value) || '---' }; w.oninput = up; h.oninput = up; up(); }
+
+    // Idade
+    const dob = document.getElementById(`dob_${mode}`), idadeVal = document.getElementById(`idade_${mode}`);
+    if (dob && idadeVal) { dob.oninput = () => { idadeVal.value = calculateIdade(dob.value); } }
+
+    // Horários
+    document.querySelectorAll('.time-input').forEach(el => {
+      el.oninput = (e) => { e.target.value = formatTime(e.target.value) }
+    })
+
+    // Atividade Física
+    const atvCheck = document.getElementById(`atv_fisica_${mode}`)
+    const atvDesc = document.getElementById(`atv_fisica_desc_container_${mode}`)
+    if (atvCheck && atvDesc) {
+      atvCheck.onchange = (e) => { atvDesc.style.display = e.target.checked ? 'block' : 'none' }
+    }
   }
 
   if (state.view === 'paciente-perfil') {
@@ -368,6 +585,17 @@ function attachSystemListeners() {
     document.getElementById('btn-nova-consulta').onclick = () => document.getElementById('modal-consulta').classList.add('active')
     document.querySelector('.close-modal-consulta').onclick = () => document.getElementById('modal-consulta').classList.remove('active')
     
+    setupFormEvents('edit')
+    
+    // Gráfico
+    initWeightChart();
+
+    const formEdit = document.getElementById('paciente-edit-form')
+    const btnSaveEdit = document.getElementById('btn-save-edit')
+    if (formEdit && btnSaveEdit) {
+      btnSaveEdit.onclick = () => handleUpdatePaciente(formEdit, state.selectedPaciente.id)
+    }
+
     const formCons = document.getElementById('form-consulta')
     if (formCons) {
       formCons.onsubmit = async (e) => {
@@ -375,45 +603,49 @@ function attachSystemListeners() {
         const fd = new FormData(e.target)
         const formObj = Object.fromEntries(fd.entries())
         
+        // Sanitize numbers (Suporte a vírgula)
+        const numFields = ['peso', 'cintura', 'quadril', 'percentual_gordura']
+        numFields.forEach(k => { 
+          if(formObj[k] && formObj[k] !== '') {
+            formObj[k] = parseFloat(formObj[k].replace(',', '.'))
+          } else {
+            formObj[k] = null
+          }
+        })
+        if(formObj.proximo_retorno === '') formObj.proximo_retorno = null
+        
         const data = {
           paciente_id: state.selectedPaciente.id,
           data_consulta: formObj.data_consulta,
-          observacoes: formObj.observacoes ? `${formObj.tipo} - ${formObj.observacoes}` : formObj.tipo
+          peso: formObj.peso,
+          cintura: formObj.cintura,
+          quadril: formObj.quadril,
+          percentual_gordura: formObj.percentual_gordura,
+          proximo_retorno: formObj.proximo_retorno,
+          observacoes: formObj.observacoes
         }
         
         try {
           await consultaService.createConsulta(data)
           document.getElementById('modal-consulta').classList.remove('active')
           await loadPacientePerfil(state.selectedPaciente.id)
-          alert('Consulta agendada!')
+          alert('Consulta salva!')
         } catch (err) { alert(err.message) }
       }
     }
+    
+    document.getElementById('btn-gerar-plano').onclick = () => alert("Em breve! Esta funcionalidade será implementada no próximo passo.");
   }
 
   if (state.view === 'pacientes-novo') {
     document.getElementById('btn-voltar').onclick = () => navigate('pacientes-lista')
-    const tabs = document.querySelectorAll('.tab-item')
-    const sections = document.querySelectorAll('.form-section')
-    const btnNext = document.getElementById('btn-next')
-    const btnSave = document.getElementById('btn-save')
-
-    const switchTab = (name) => {
-      state.currentTab = name
-      tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name))
-      sections.forEach(s => s.classList.toggle('active', s.id === `section-${name}`))
-      btnNext.style.display = name === 'habitos' ? 'none' : 'flex'
-      btnSave.style.display = name === 'habitos' ? 'flex' : 'none'
-    }
-
-    tabs.forEach(t => t.onclick = () => switchTab(t.dataset.tab))
-    if (btnNext) btnNext.onclick = () => { if (state.currentTab === 'pessoal') switchTab('clinico'); else if (state.currentTab === 'clinico') switchTab('habitos'); }
-    
-    const w = document.getElementById('weight'), h = document.getElementById('height')
-    if (w && h) { const up = () => { document.getElementById('imc-val').innerText = calculateIMC(w.value, h.value) || '---' }; w.oninput = up; h.oninput = up; }
+    setupFormEvents('new')
     
     const f = document.getElementById('paciente-form')
-    if (f) f.onsubmit = handleSavePaciente
+    const btnSaveNew = document.getElementById('btn-save-new')
+    if (f && btnSaveNew) {
+      btnSaveNew.onclick = () => handleSavePaciente(f)
+    }
   }
 }
 
@@ -429,18 +661,103 @@ async function handleSignup(e) {
 
 async function handleLogout() { await authService.signOut(); navigate('login'); }
 
-async function handleSavePaciente(e) {
-  e.preventDefault(); const fd = new FormData(e.target), d = Object.fromEntries(fd.entries())
-  if (!d.nome) return alert('Nome obrigatório!')
-  d.objetivos = Array.from(fd.getAll('objetivos'))
+function sanitizePacienteData(d) {
+  const clean = { ...d };
+  
+  if (clean.objetivo_texto !== undefined) {
+    if (!clean.objetivos) clean.objetivos = [];
+    if (clean.objetivo_texto.trim() !== '') clean.objetivos.push(clean.objetivo_texto);
+    delete clean.objetivo_texto;
+  }
+  if (clean.patologias_outro !== undefined) {
+    if (!clean.patologias) clean.patologias = [];
+    if (clean.patologias_outro.trim() !== '') clean.patologias.push(clean.patologias_outro);
+    delete clean.patologias_outro;
+  }
+  if (clean.restricoes_outro !== undefined) {
+    if (!clean.restricoes_alimentares) clean.restricoes_alimentares = [];
+    if (clean.restricoes_outro.trim() !== '') clean.restricoes_alimentares.push(clean.restricoes_outro);
+    delete clean.restricoes_outro;
+  }
+  if (clean.alergias_outro !== undefined) {
+    if (!clean.alergias) clean.alergias = [];
+    if (clean.alergias_outro.trim() !== '') clean.alergias.push(clean.alergias_outro);
+    delete clean.alergias_outro;
+  }
+  
+  if (!clean.atividade_fisica) clean.atividade_fisica_descricao = null
+  
+  const nums = ['peso_inicial', 'altura', 'refeicoes_por_dia', 'litros_agua']
+  nums.forEach(k => { 
+    if (clean[k] !== undefined && clean[k] !== null && clean[k].toString().trim() !== '') {
+      let val = parseFloat(clean[k].toString().replace(',', '.'));
+      if (k === 'altura' && val > 3) val = val / 100;
+      clean[k] = isNaN(val) ? null : val;
+    } else {
+      clean[k] = null;
+    }
+  })
+  
+  const textFields = ['data_nascimento', 'sexo', 'telefone', 'whatsapp', 'email', 'nivel_atividade', 'medicamentos', 'suplementos', 'horario_acorda', 'horario_dorme', 'observacoes']
+  textFields.forEach(k => { if(clean[k] === '') clean[k] = null })
+  
+  return clean;
+}
+
+async function handleSavePaciente(form) {
+  if (!form) return;
+  console.log('[DEBUG] Iniciando salvamento manual...');
+  
+  const rawData = {};
+  form.querySelectorAll('input, select, textarea').forEach(el => {
+    if (!el.name || el.disabled) return;
+    if (el.type === 'checkbox') {
+      if (el.name === 'atividade_fisica') { rawData[el.name] = el.checked; }
+      else {
+        if (!rawData[el.name]) rawData[el.name] = [];
+        if (el.checked) rawData[el.name].push(el.value);
+      }
+    } else { rawData[el.name] = el.value; }
+  });
+
+  const d = sanitizePacienteData(rawData);
+  console.log('[DEBUG] Dados coletados:', d);
+  if (!d.nome) return alert('Nome é obrigatório!');
+  
   try { 
+    d.nutricionista_id = state.user.id;
     const result = await pacienteService.createPaciente(d); 
-    console.log('[LOG] Paciente cadastrado com sucesso no banco de dados:', d);
     alert('Paciente cadastrado com sucesso!'); 
-    navigate('pacientes-lista'); 
+    await loadPacientePerfil(result.id);
   } catch (err) { 
-    console.error('[ERRO] Falha ao salvar paciente:', err);
-    alert(err.message) 
+    console.error(err);
+    alert('Erro ao salvar: ' + (err.message || err)); 
+  }
+}
+
+async function handleUpdatePaciente(form, id) {
+  if (!form) return;
+  console.log('[DEBUG] Iniciando atualização manual...');
+  const d = {};
+  form.querySelectorAll('input, select, textarea').forEach(el => {
+    if (!el.name || el.disabled) return;
+    if (el.type === 'checkbox') {
+      if (el.name === 'atividade_fisica') d[el.name] = el.checked;
+      else {
+        if (!d[el.name]) d[el.name] = [];
+        if (el.checked) d[el.name].push(el.value);
+      }
+    } else { d[el.name] = el.value; }
+  });
+
+  const cleanData = sanitizePacienteData(d);
+  try {
+    await pacienteService.updatePaciente(id, cleanData);
+    alert('Alterações salvas!');
+    await loadPacientePerfil(id);
+  } catch (err) { 
+    console.error(err);
+    alert(err.message); 
   }
 }
 
@@ -479,10 +796,7 @@ async function loadPacientePerfil(id) {
 
 function navigate(v) { state.view = v; state.message = { text: '', type: '' }; state.currentTab = 'pessoal'; render(); }
 function setMessage(t, ty) { state.message = { text: t, type: ty }; render(); }
-function calculateIMC(w, h) { if (!w || !h) return null; return (w / ((h / 100) ** 2)).toFixed(1); }
 
-let timeout = null
-function debounce(f, w) { return function(...a) { clearTimeout(timeout); timeout = setTimeout(() => f.apply(this, a), w); } }
 
 let isAuthInitialized = false;
 
@@ -491,16 +805,17 @@ authService.onAuthStateChange(async (ev, sess) => {
     if (sess) { 
       state.user = sess.user; 
       state.view = 'dashboard'; 
+      render(); // Renderiza o layout do dashboard imediatamente enquanto carrega os dados
       await loadDashboardData(); 
       await loadPacientes(); 
     } 
     else { 
       state.user = null; 
       state.view = 'login'; 
+      render();
     }
   } catch (err) {
     console.error('Erro na inicialização da sessão:', err);
-    alert('Erro ao carregar dados do sistema. Verifique o console.');
   } finally {
     isAuthInitialized = true;
     render()
@@ -509,9 +824,18 @@ authService.onAuthStateChange(async (ev, sess) => {
 
 render()
 
-// Safety timeout for Supabase lock issues in Vite HMR
+// Safety timeout: Se após 5 segundos ainda estiver na tela de loading, algo deu errado
 setTimeout(() => {
-  if (!isAuthInitialized && state.view === 'loading') {
-    app.innerHTML = '<div style="color: white; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: sans-serif;"><p>Parece que o banco de dados travou (Lock roubado pelo recarregamento automático).</p><button style="padding: 10px 20px; border: none; border-radius: 8px; background: #ff6b81; color: white; cursor: pointer;" onclick="localStorage.clear(); sessionStorage.clear(); window.location.reload();">Forçar Recarregamento</button></div>'
+  const isLoadingVisible = document.body.innerText.includes('Iniciando NutriSystem...');
+  if (isLoadingVisible && !isAuthInitialized) {
+    app.innerHTML = `
+      <div style="color: white; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: sans-serif; text-align: center; padding: 20px;">
+        <p style="font-size: 1.2rem; margin-bottom: 20px;">O sistema está demorando mais que o esperado para iniciar.</p>
+        <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 30px;">Isso pode ser um problema de conexão com o banco de dados.</p>
+        <button style="padding: 12px 24px; border: none; border-radius: 8px; background: #ff6b81; color: white; font-weight: bold; cursor: pointer;" onclick="localStorage.clear(); sessionStorage.clear(); window.location.reload();">
+          Forçar Recarregamento
+        </button>
+      </div>
+    `;
   }
-}, 3000);
+}, 5000);

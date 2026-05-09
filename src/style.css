@@ -68,6 +68,10 @@ h2 {
   text-align: left;
 }
 
+.full-width {
+  grid-column: 1 / -1;
+}
+
 label {
   display: block;
   font-size: 0.85rem;
@@ -587,5 +591,77 @@ button:disabled {
 .status-badge.realizada {
   background: #eee;
   color: #888;
+}
+
+/* Consultations Timeline */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.timeline-item {
+  display: flex;
+  flex-direction: column;
+  background: #fdfdfd;
+  border-left: 4px solid #2ed573;
+  padding: 15px;
+  border-radius: 0 10px 10px 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.timeline-date {
+  font-weight: 700;
+  color: #2ed573;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.timeline-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.timeline-content p {
+  margin: 0;
+  padding: 0;
+}
+
+.chart-container {
+  position: relative;
+  height: 300px;
+  width: 100%;
+  margin-top: 20px;
+  margin-bottom: 30px;
+  background: white;
+  border-radius: 15px;
+  padding: 15px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+}
+
+.plan-item {
+  background: #f9f9f9;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.plan-item:hover {
+  background: #f0f0f0;
+  transform: translateX(5px);
+}
+
+.plan-date {
+  font-weight: 600;
+  color: #333;
 }
 

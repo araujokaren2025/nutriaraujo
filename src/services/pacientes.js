@@ -35,19 +35,25 @@ export const pacienteService = {
   },
 
   async createPaciente(pacienteData) {
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user) throw new Error('Sessão expirada. Por favor, faça login novamente.')
     
     const { data, error } = await supabase
       .from('pacientes')
       .insert([
         { 
           ...pacienteData, 
-          nutricionista_id: user.id 
+          nutricionista_id: session.user.id 
         }
       ])
       .select()
 
-    if (error) throw error
+    if (error) {
+      console.error('Erro Supabase ao inserir paciente:', error)
+      throw error
+    }
+    
+    if (!data || data.length === 0) throw new Error('Falha ao criar paciente - nenhum dado retornado')
     return data[0]
   },
 
@@ -56,6 +62,18 @@ export const pacienteService = {
       .from('pacientes')
       .select('*')
       .eq('id', id)
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  async updatePaciente(id, pacienteData) {
+    const { data, error } = await supabase
+      .from('pacientes')
+      .update(pacienteData)
+      .eq('id', id)
+      .select()
       .single()
 
     if (error) throw error
