@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase.js'
+import { agendamentoService } from './agendamentos.js'
 
 export const dashboardService = {
   async getTotalPacientes() {
@@ -84,22 +85,51 @@ export const dashboardService = {
   },
 
   async getHorariosDisponiveis() {
-    // Mock para agenda enquanto não há tabela específica
-    // Simulando 8 horários por dia, 5 dias por semana = 40 horários
-    const totalSemana = 40
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { quantidade: 0, detalhes: [] }
+
+    const startOfWeek = new Date()
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay())
+    startOfWeek.setHours(0, 0, 0, 0)
+
+    const agendamentos = await agendamentoService.getAgendamentosSemana()
     
-    const ocupados = await this.getConsultasSemana()
-    const disponiveis = totalSemana - ocupados
+    // Total de 40 slots (5 dias * 8 slots)
+    const totalSlots = 40
+    const ocupados = agendamentos.filter(a => a.status !== 'cancelado').length
+    const disponiveis = totalSlots - ocupados
+
+    // Organizar por dia
+    const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+    const detalhes = []
+
+    // Mock das faixas de horários que a nutri atende (exemplo)
+    const faixas = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00']
+
+    for (let i = 1; i <= 5; i++) { // Segunda a Sexta
+      const diaNome = dias[i]
+      const diaData = new Date(startOfWeek)
+      diaData.setDate(startOfWeek.getDate() + i)
+      
+      const ocupadosNoDia = agendamentos.filter(a => {
+        const d = new Date(a.data_hora)
+        return d.getDay() === i
+      }).map(a => {
+        const d = new Date(a.data_hora)
+        return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      })
+
+      detalhes.push({
+        dia: diaNome,
+        data: diaData.toISOString().split('T')[0],
+        horários: faixas.filter(h => !ocupadosNoDia.includes(h)),
+        ocupados: agendamentos.filter(a => new Date(a.data_hora).getDay() === i)
+      })
+    }
 
     return {
       quantidade: disponiveis > 0 ? disponiveis : 0,
-      detalhes: [
-        { dia: 'Segunda', horários: ['08:00', '09:00', '14:00', '16:00'] },
-        { dia: 'Terça', horários: ['10:00', '11:00', '15:00'] },
-        { dia: 'Quarta', horários: ['08:00', '13:00', '17:00'] },
-        { dia: 'Quinta', horários: ['09:00', '14:00'] },
-        { dia: 'Sexta', horários: ['10:00', '11:00', '16:00'] }
-      ]
+      detalhes: detalhes
     }
   }
 }
