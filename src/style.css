@@ -393,10 +393,20 @@ button:disabled {
 }
 
 .time-slot {
-  background: #f0f0f0;
-  padding: 4px 10px;
-  border-radius: 5px;
-  font-size: 0.85rem;
+  background: #2ed573 !important;
+  color: #fff !important;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none !important;
+  display: inline-block;
+  transition: all 0.2s ease;
+}
+
+.time-slot:hover {
+  background: #2bad5d !important;
+  transform: scale(1.05);
 }
 /* Patients List Styles */
 .search-bar {

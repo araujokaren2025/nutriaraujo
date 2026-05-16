@@ -15,6 +15,7 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isConsultasSemanaOpen, setIsConsultasSemanaOpen] = useState(false);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const { user } = useAuth();
@@ -71,7 +72,7 @@ const Dashboard = () => {
           <div className="value">{data.totalPacientes}</div>
         </div>
 
-        <div className="card" onClick={() => setIsModalOpen(true)}>
+        <div className="card" onClick={() => setIsConsultasSemanaOpen(true)}>
           <div className="card-header">
             <Calendar className="card-icon" />
             <h3>Consultas da semana</h3>
@@ -173,6 +174,33 @@ const Dashboard = () => {
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+      {isConsultasSemanaOpen && (
+        <div className="modal active" onClick={() => setIsConsultasSemanaOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <span className="close-modal" onClick={() => setIsConsultasSemanaOpen(false)}>&times;</span>
+            <h2>Consultas da Semana</h2>
+            <div className="consultas-lista" style={{ marginTop: '20px' }}>
+              {data.agenda.detalhes.some(d => d.ocupados?.length > 0) ? (
+                data.agenda.detalhes.flatMap(d => d.ocupados || []).map((o, idx) => (
+                  <div key={idx} className="plan-item" style={{ marginBottom: '12px', padding: '15px' }}>
+                    <div>
+                      <strong style={{ display: 'block', fontSize: '1rem', color: '#fff' }}>{o.pacientes?.nome}</strong>
+                      <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)' }}>
+                        {new Date(o.data_hora).toLocaleDateString('pt-BR')} às {new Date(o.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <span className={`status-badge ${o.status}`} style={{ fontSize: '0.75rem' }}>
+                      {o.status.charAt(0).toUpperCase() + o.status.slice(1)}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="empty-msg">Nenhuma consulta agendada para esta semana.</p>
+              )}
+            </div>
           </div>
         </div>
       )}
