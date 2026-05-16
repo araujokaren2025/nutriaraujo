@@ -653,8 +653,23 @@ button:disabled {
 }
 
 .status-badge.realizada {
-  background: #eee;
-  color: #888;
+  background: rgba(46, 213, 115, 0.15);
+  color: #2ed573;
+}
+
+.status-badge.pendente {
+  background: rgba(255, 159, 67, 0.15);
+  color: #ff9f43;
+}
+
+.status-badge.confirmado {
+  background: rgba(84, 160, 255, 0.15);
+  color: #54a0ff;
+}
+
+.status-badge.cancelado {
+  background: rgba(255, 107, 129, 0.15);
+  color: #ff6b81;
 }
 
 /* Consultations Timeline */

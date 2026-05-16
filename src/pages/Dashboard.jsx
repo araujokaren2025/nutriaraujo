@@ -185,15 +185,17 @@ const Dashboard = () => {
             <div className="consultas-lista" style={{ marginTop: '20px' }}>
               {data.agenda.detalhes.some(d => d.ocupados?.length > 0) ? (
                 data.agenda.detalhes.flatMap(d => d.ocupados || []).map((o, idx) => (
-                  <div key={idx} className="plan-item" style={{ marginBottom: '12px', padding: '15px' }}>
+                  <div key={idx} className="plan-item" style={{ marginBottom: '12px', padding: '15px', background: 'rgba(255, 255, 255, 0.9)' }}>
                     <div>
-                      <strong style={{ display: 'block', fontSize: '1rem', color: '#fff' }}>{o.pacientes?.nome}</strong>
-                      <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)' }}>
+                      <strong style={{ display: 'block', fontSize: '1.1rem', color: '#FD99A2' }}>{o.pacientes?.nome}</strong>
+                      <span style={{ fontSize: '0.9rem', color: '#555', fontWeight: '500' }}>
                         {new Date(o.data_hora).toLocaleDateString('pt-BR')} às {new Date(o.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
-                    <span className={`status-badge ${o.status}`} style={{ fontSize: '0.75rem' }}>
-                      {o.status.charAt(0).toUpperCase() + o.status.slice(1)}
+                    <span className={`status-badge ${o.status}`} style={{ fontSize: '0.8rem' }}>
+                      {o.status === 'pendente' ? 'Pendente' : 
+                       o.status === 'confirmado' ? 'Confirmado' : 
+                       o.status === 'realizado' ? 'Realizado' : 'Cancelado'}
                     </span>
                   </div>
                 ))
