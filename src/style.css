@@ -560,7 +560,7 @@ button:disabled {
   align-items: center;
   gap: 10px;
   font-size: 0.9rem;
-  color: #555;
+  color: #fff;
   cursor: pointer;
 }
 
