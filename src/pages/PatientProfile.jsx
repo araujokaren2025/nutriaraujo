@@ -7,6 +7,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import { Line } from 'react-chartjs-2';
 import ScheduleModal from '../components/ScheduleModal';
 import MealPlanEditor from '../components/MealPlanEditor';
+import MealPlanViewModal from '../components/MealPlanViewModal';
 import ConsultationModal from '../components/ConsultationModal';
 import { agendamentoService } from '../services/agendamentos';
 import { mealPlanService } from '../services/mealPlan';
@@ -38,6 +39,8 @@ const PatientProfile = () => {
   const [loadingAI, setLoadingAI] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [viewingPlan, setViewingPlan] = useState(null);
+  const [editingPlanId, setEditingPlanId] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -113,15 +116,44 @@ const PatientProfile = () => {
   const handleSavePlan = async (planoConteudo) => {
     setLoadingAI(true);
     try {
-      await mealPlanService.salvarPlano(id, planoConteudo);
-      alert('Plano alimentar salvo com sucesso!');
+      if (editingPlanId) {
+        await mealPlanService.updatePlano(editingPlanId, planoConteudo);
+        alert('Plano alimentar atualizado com sucesso!');
+      } else {
+        await mealPlanService.salvarPlano(id, planoConteudo);
+        alert('Plano alimentar salvo com sucesso!');
+      }
       const m = await mealPlanService.getHistoricoPlanos(id);
       setMealPlans(m);
       setGeneratedPlan(null);
+      setEditingPlanId(null);
       setActiveTab('historico');
     } catch (err) {
       console.error(err);
       alert('Erro ao salvar plano: ' + err.message);
+    } finally {
+      setLoadingAI(false);
+    }
+  };
+
+  const handleEditPlan = (plan) => {
+    setEditingPlanId(plan.id);
+    setGeneratedPlan(plan.conteudo);
+    setViewingPlan(null);
+  };
+
+  const handleDeletePlan = async (planId) => {
+    if (!window.confirm('Tem certeza de que deseja excluir este plano alimentar definitivamente?')) return;
+    try {
+      setLoadingAI(true);
+      await mealPlanService.deletePlano(planId);
+      alert('Plano alimentar excluído com sucesso!');
+      const m = await mealPlanService.getHistoricoPlanos(id);
+      setMealPlans(m);
+      setViewingPlan(null);
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao excluir plano: ' + err.message);
     } finally {
       setLoadingAI(false);
     }
@@ -212,6 +244,7 @@ const PatientProfile = () => {
             onSave={handleSavePlan}
             onCancel={() => {
               setGeneratedPlan(null);
+              setEditingPlanId(null);
               setActiveTab('historico');
             }}
             loading={loadingAI}
@@ -248,14 +281,20 @@ const PatientProfile = () => {
                       <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #eee', width: '100%' }}>
                         <div style={{ display: 'grid', gap: '20px' }}>
                           {plan.conteudo.plano_semanal.slice(0, 1).map((dia, idx) => (
-                            <div key={idx}>
+                            <div key={idx} onClick={(e) => e.stopPropagation()}>
                               <p style={{ fontWeight: '700', marginBottom: '10px' }}>Amostra (Segunda-feira):</p>
                               {Object.entries(dia.refeicoes).map(([meal, options]) => (
                                 <p key={meal} style={{ fontSize: '0.9rem', marginBottom: '5px' }}>
                                   <strong>{meal.replace(/_/g, ' ')}:</strong> {options[0]}
                                 </p>
                               ))}
-                              <p style={{ fontSize: '0.8rem', color: '#888', marginTop: '10px' }}>* Clique para ver o plano completo (em desenvolvimento)</p>
+                              <button
+                                className="btn-primary"
+                                style={{ width: 'auto', padding: '8px 16px', fontSize: '0.85rem', marginTop: '15px', background: '#6c5ce7' }}
+                                onClick={() => setViewingPlan(plan)}
+                              >
+                                Visualizar Plano Completo
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -323,6 +362,15 @@ const PatientProfile = () => {
           const p = await pacienteService.getPacienteById(id);
           setPatient(p);
         }}
+      />
+
+      <MealPlanViewModal
+        isOpen={viewingPlan !== null}
+        onClose={() => setViewingPlan(null)}
+        plan={viewingPlan}
+        patientName={patient?.nome}
+        onEdit={handleEditPlan}
+        onDelete={handleDeletePlan}
       />
     </>
   );

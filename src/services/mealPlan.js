@@ -42,5 +42,26 @@ export const mealPlanService = {
 
     if (error) throw error
     return data
+  },
+
+  async updatePlano(id, conteudo) {
+    const { data, error } = await supabase
+      .from('planos_alimentares')
+      .update({ conteudo })
+      .eq('id', id)
+      .select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  async deletePlano(id) {
+    const { error } = await supabase
+      .from('planos_alimentares')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+    return true
   }
 }
