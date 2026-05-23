@@ -185,10 +185,10 @@ const Dashboard = () => {
             <div className="consultas-lista" style={{ marginTop: '20px' }}>
               {data.agenda.detalhes.some(d => d.ocupados?.length > 0) ? (
                 data.agenda.detalhes.flatMap(d => d.ocupados || []).map((o, idx) => (
-                  <div key={idx} className="plan-item" style={{ marginBottom: '12px', padding: '15px', background: 'rgba(255, 255, 255, 0.9)' }}>
+                  <div key={idx} className="plan-item" style={{ marginBottom: '12px', padding: '15px' }}>
                     <div>
                       <strong style={{ display: 'block', fontSize: '1.1rem', color: '#FD99A2' }}>{o.pacientes?.nome}</strong>
-                      <span style={{ fontSize: '0.9rem', color: '#555', fontWeight: '500' }}>
+                      <span style={{ fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.8)', fontWeight: '500' }}>
                         {new Date(o.data_hora).toLocaleDateString('pt-BR')} às {new Date(o.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>

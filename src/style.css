@@ -722,7 +722,8 @@ button:disabled {
 }
 
 .plan-item {
-  background: #f9f9f9;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 15px;
   border-radius: 10px;
   margin-bottom: 10px;
@@ -734,12 +735,124 @@ button:disabled {
 }
 
 .plan-item:hover {
-  background: #f0f0f0;
+  background: rgba(255, 255, 255, 0.1);
   transform: translateX(5px);
+  border-color: rgba(253, 153, 162, 0.3);
 }
 
 .plan-date {
   font-weight: 600;
-  color: #333;
+  color: #fff;
 }
+
+/* Meal Plan Editor com Abas e Cards */
+.meal-plan-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 25px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(253, 153, 162, 0.3) transparent;
+}
+
+.meal-plan-tabs::-webkit-scrollbar {
+  height: 6px;
+}
+
+.meal-plan-tabs::-webkit-scrollbar-thumb {
+  background: rgba(253, 153, 162, 0.3);
+  border-radius: 4px;
+}
+
+.meal-plan-tab-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+  width: auto;
+  margin-top: 0;
+}
+
+.meal-plan-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: none;
+}
+
+.meal-plan-tab-btn.active {
+  background: rgba(253, 153, 162, 0.15);
+  border-color: #FD99A2;
+  color: #FD99A2;
+  box-shadow: 0 0 10px rgba(253, 153, 162, 0.1);
+}
+
+.meals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 25px;
+  margin-bottom: 20px;
+}
+
+.meal-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.meal-card:hover {
+  border-color: rgba(253, 153, 162, 0.2);
+  transform: translateY(-2px);
+}
+
+.meal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #FD99A2;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meal-inputs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.meal-input {
+  font-size: 0.9rem !important;
+  padding: 10px 14px !important;
+  background: #fff !important;
+  border: 1px solid rgba(253, 153, 162, 0.3) !important;
+  border-radius: 8px !important;
+  color: #333 !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+}
+
+.meal-input:focus {
+  background: #fff !important;
+  border-color: #FD99A2 !important;
+  box-shadow: 0 0 0 2px rgba(253, 153, 162, 0.2) !important;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 

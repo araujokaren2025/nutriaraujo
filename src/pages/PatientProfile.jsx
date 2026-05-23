@@ -14,6 +14,15 @@ import { Clock, Sparkles, History, ChevronRight } from 'lucide-react';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
+const LOADING_MESSAGES = [
+  "Buscando metas, restrições e histórico do paciente...",
+  "Conectando à IA Nutricionista (Gemini 2.5)...",
+  "Analisando objetivos e calculando nutrientes...",
+  "Montando sugestões de cardápios brasileiros...",
+  "Refinando opções e evitando repetições diárias...",
+  "Quase pronto! Estruturando plano alimentar semanal..."
+];
+
 const PatientProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -27,6 +36,7 @@ const PatientProfile = () => {
   const [mealPlans, setMealPlans] = useState([]);
   const [generatedPlan, setGeneratedPlan] = useState(null);
   const [loadingAI, setLoadingAI] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const [selectedPlan, setSelectedPlan] = useState(null);
 
   useEffect(() => {
@@ -57,17 +67,46 @@ const PatientProfile = () => {
   const handleGenerateAIPlan = async () => {
     setLoadingAI(true);
     setGeneratedPlan(null);
+    setLoadingMessage(LOADING_MESSAGES[0]);
+
+    // Intervalo para atualizar as mensagens de loading a cada 4 segundos
+    let currentMsgIndex = 0;
+    const msgInterval = setInterval(() => {
+      currentMsgIndex = (currentMsgIndex + 1) % LOADING_MESSAGES.length;
+      setLoadingMessage(LOADING_MESSAGES[currentMsgIndex]);
+    }, 4000);
+
     try {
       console.log('Iniciando geração de plano para:', patient.nome);
-      const plano = await mealPlanService.gerarPlanoComIA(patient);
-      console.log('Plano gerado com sucesso:', plano);
+      const resData = await mealPlanService.gerarPlanoComIA(patient);
+      console.log('Dados recebidos da IA:', resData);
+
+      // Tratamento resiliente caso a resposta precise ser parseada
+      let plano;
+      if (typeof resData === 'string') {
+        try {
+          plano = JSON.parse(resData);
+        } catch (jsonErr) {
+          console.error('Erro ao dar JSON.parse na resposta string:', jsonErr);
+          throw new Error('A resposta da inteligência artificial não está em um formato JSON válido.');
+        }
+      } else {
+        plano = resData;
+      }
+
+      if (!plano || !plano.plano_semanal) {
+        throw new Error('A estrutura do plano gerado pela IA é inválida (campo plano_semanal ausente).');
+      }
+
       setGeneratedPlan(plano);
       setActiveTab('novo_plano');
     } catch (err) {
       console.error('Erro detalhado:', err);
-      alert('Erro ao gerar plano com IA: ' + (err.message || 'Erro desconhecido'));
+      alert('Não foi possível gerar o plano com IA no momento. Deseja tentar novamente ou criar um Plano Manual?\n\n(Detalhe do erro: ' + (err.message || 'Erro de conexão') + ')');
     } finally {
+      clearInterval(msgInterval);
       setLoadingAI(false);
+      setLoadingMessage('');
     }
   };
 
@@ -126,12 +165,12 @@ const PatientProfile = () => {
         <div className="perfil-card" style={{ marginTop: '25px', background: 'rgba(46, 213, 115, 0.05)', border: '1px solid rgba(46, 213, 115, 0.2)' }}>
           <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><Clock size={20} /> Próximas Consultas</h3>
           {upcomingAppointments.map(a => (
-            <div key={a.id} className="plan-item" style={{ background: 'white' }}>
+            <div key={a.id} className="plan-item">
               <div>
                 <strong>{new Date(a.data_hora).toLocaleDateString('pt-BR')} às {new Date(a.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#666' }}>Status: {a.status}</p>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.7)' }}>Status: {a.status}</p>
               </div>
-              {a.observacoes && <p style={{ fontSize: '0.85rem', fontStyle: 'italic' }}>{a.observacoes}</p>}
+              {a.observacoes && <p style={{ fontSize: '0.85rem', fontStyle: 'italic', color: 'rgba(255, 255, 255, 0.6)', margin: 0 }}>{a.observacoes}</p>}
             </div>
           ))}
         </div>
@@ -153,7 +192,21 @@ const PatientProfile = () => {
           )}
         </div>
 
-        {generatedPlan ? (
+        {loadingAI ? (
+          <div className="loading-ai-container" style={{ textAlign: 'center', padding: '40px 20px', animation: 'fadeIn 0.3s ease-out' }}>
+            <div className="spinner" style={{ 
+              width: '40px', 
+              height: '40px', 
+              border: '4px solid rgba(253, 153, 162, 0.1)', 
+              borderTopColor: '#FD99A2', 
+              borderRadius: '50%', 
+              margin: '0 auto 20px', 
+              animation: 'spin 1s linear infinite' 
+            }}></div>
+            <p style={{ fontSize: '1.1rem', color: '#fff', fontWeight: '500', marginBottom: '10px' }}>{loadingMessage}</p>
+            <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>Por favor, aguarde cerca de 30 segundos.</p>
+          </div>
+        ) : generatedPlan ? (
           <MealPlanEditor 
             plano={generatedPlan} 
             onSave={handleSavePlan}

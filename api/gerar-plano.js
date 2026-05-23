@@ -27,45 +27,71 @@ export default async function handler(req, res) {
 
   try {
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+    
+    const responseSchema = {
+      type: "OBJECT",
+      properties: {
+        plano_semanal: {
+          type: "ARRAY",
+          items: {
+            type: "OBJECT",
+            properties: {
+              dia: { type: "STRING" },
+              refeicoes: {
+                type: "OBJECT",
+                properties: {
+                  cafe_da_manha: { type: "ARRAY", items: { type: "STRING" } },
+                  lanche_manha: { type: "ARRAY", items: { type: "STRING" } },
+                  almoco: { type: "ARRAY", items: { type: "STRING" } },
+                  lanche_tarde: { type: "ARRAY", items: { type: "STRING" } },
+                  jantar: { type: "ARRAY", items: { type: "STRING" } }
+                },
+                required: ["cafe_da_manha", "lanche_manha", "almoco", "lanche_tarde", "jantar"]
+              }
+            },
+            required: ["dia", "refeicoes"]
+          }
+        }
+      },
+      required: ["plano_semanal"]
+    };
+
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
-      generationConfig: { responseMimeType: "application/json" }
+      model: "gemini-2.5-flash",
+      generationConfig: { 
+        responseMimeType: "application/json",
+        responseSchema: responseSchema
+      }
     });
 
-    const prompt = `Você é um nutricionista profissional.
-Gere um plano alimentar semanal com base nos dados abaixo.
+    const prompt = `Você é um nutricionista clínico profissional especialista na culinária e rotina brasileira.
+Gere um plano alimentar semanal completo, saudável e diversificado com base nos dados do paciente fornecidos abaixo.
 
-⚠️ Regras:
-- Responda APENAS em JSON válido
-- Não use markdown
-- Não escreva explicações
-- Respeite restrições e alergias
-
-Dados do paciente:
+Dados do Paciente (Metas, Alergias, Restrições e Histórico):
 ${JSON.stringify(dados_do_paciente, null, 2)}
 
-Formato obrigatório:
+⚠️ Regras Críticas de Execução:
+- Você deve responder APENAS e estritamente o objeto JSON solicitado.
+- Não inclua blocos de código markdown (como \`\`\`json ... \`\`\`), explicações, introduções ou textos complementares.
+- Adapte o cardápio rigorosamente a quaisquer alergias ou restrições descritas nos dados.
+- Utilize alimentos comuns, acessíveis e culturalmente aceitos no Brasil.
+- Evite repetições monótonas de alimentos nos dias seguidos.
 
+O formato do JSON retornado deve seguir exatamente esta estrutura:
 {
   "plano_semanal": [
     {
       "dia": "Segunda-feira",
       "refeicoes": {
-        "cafe_da_manha": ["", "", "", "", ""],
-        "lanche_manha": ["", "", "", "", ""],
-        "almoco": ["", "", "", "", ""],
-        "lanche_tarde": ["", "", "", "", ""],
-        "jantar": ["", "", "", "", ""]
+        "cafe_da_manha": ["Opção 1", "Opção 2", "Opção 3", "Opção 4", "Opção 5"],
+        "lanche_manha": ["Opção 1", "Opção 2", "Opção 3", "Opção 4", "Opção 5"],
+        "almoco": ["Opção 1", "Opção 2", "Opção 3", "Opção 4", "Opção 5"],
+        "lanche_tarde": ["Opção 1", "Opção 2", "Opção 3", "Opção 4", "Opção 5"],
+        "jantar": ["Opção 1", "Opção 2", "Opção 3", "Opção 4", "Opção 5"]
       }
     }
   ]
-}
-
-Regras:
-- gerar 7 dias
-- 5 opções por refeição
-- evitar repetição
-- usar alimentos comuns no Brasil`;
+}`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;

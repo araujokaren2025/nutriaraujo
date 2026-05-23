@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Save, ChevronDown, ChevronUp } from 'lucide-react';
+import { Save } from 'lucide-react';
 
 const MealPlanEditor = ({ plano, onSave, onCancel, loading }) => {
   const [editedPlano, setEditedPlano] = useState(plano);
-  const [expandedDay, setExpandedDay] = useState(0);
+  const [activeTab, setActiveTab] = useState(0); // Índice do dia ativo (0 a 6)
 
   const handleOptionChange = (dayIndex, mealKey, optionIndex, newValue) => {
     const newPlano = { ...editedPlano };
@@ -21,10 +21,12 @@ const MealPlanEditor = ({ plano, onSave, onCancel, loading }) => {
 
   if (!editedPlano || !editedPlano.plano_semanal) return null;
 
+  const diaAtivo = editedPlano.plano_semanal[activeTab];
+
   return (
     <div className="meal-plan-editor" style={{ marginTop: '30px', animation: 'fadeIn 0.5s ease-out' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-        <h2 style={{ color: '#fff', fontSize: '1.4rem', textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>Plano Sugerido pela IA</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap', gap: '15px' }}>
+        <h2 style={{ color: '#fff', fontSize: '1.4rem', textShadow: '0 2px 4px rgba(0,0,0,0.2)', margin: 0 }}>Plano Sugerido pela IA</h2>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button className="btn-secondary" onClick={onCancel} style={{ width: 'auto', padding: '10px 20px' }}>
             Descartar
@@ -36,53 +38,43 @@ const MealPlanEditor = ({ plano, onSave, onCancel, loading }) => {
         </div>
       </div>
 
-      <div className="days-list">
-        {editedPlano.plano_semanal.map((dia, dIdx) => (
-          <div key={dIdx} className="day-card" style={{ marginBottom: '15px', border: '1px solid rgba(255, 107, 129, 0.2)', borderRadius: '12px', overflow: 'hidden', background: 'rgba(255, 107, 129, 0.05)', backdropFilter: 'blur(10px)', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
-            <div 
-              onClick={() => setExpandedDay(expandedDay === dIdx ? -1 : dIdx)}
-              style={{ padding: '15px 25px', background: expandedDay === dIdx ? 'rgba(255, 107, 129, 0.15)' : 'rgba(255, 107, 129, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: 'background 0.3s' }}
-            >
-              <strong style={{ color: '#333', fontSize: '1.1rem' }}>{dia.dia}</strong>
-              {expandedDay === dIdx ? <ChevronUp size={20} color="#FD99A2" /> : <ChevronDown size={20} color="#888" />}
-            </div>
-
-            {expandedDay === dIdx && (
-              <div style={{ padding: '25px', background: 'transparent' }}>
-                <div className="refeicoes-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '25px' }}>
-                  {Object.entries(dia.refeicoes).map(([key, options]) => (
-                    <div key={key} className="meal-group">
-                      <label style={{ fontWeight: '700', color: '#FD99A2', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', fontSize: '0.95rem' }}>
-                        {mealLabels[key] || key}
-                      </label>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {options.map((opt, oIdx) => (
-                          <input 
-                            key={oIdx}
-                            type="text"
-                            value={opt}
-                            onChange={(e) => handleOptionChange(dIdx, key, oIdx, e.target.value)}
-                            placeholder={`Opção ${oIdx + 1}`}
-                            style={{ 
-                              fontSize: '0.9rem', 
-                              padding: '10px 14px',
-                              background: '#fff',
-                              border: '1px solid rgba(255, 107, 129, 0.3)',
-                              borderRadius: '8px',
-                              color: '#333',
-                              fontWeight: '500'
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+      {/* Abas dos Dias da Semana */}
+      <div className="meal-plan-tabs">
+        {editedPlano.plano_semanal.map((dia, idx) => (
+          <button
+            key={idx}
+            className={`meal-plan-tab-btn ${activeTab === idx ? 'active' : ''}`}
+            onClick={() => setActiveTab(idx)}
+          >
+            {dia.dia}
+          </button>
         ))}
       </div>
+
+      {/* Grid de Refeições do Dia Ativo */}
+      {diaAtivo && (
+        <div className="meals-grid" style={{ animation: 'fadeIn 0.3s ease-in' }}>
+          {Object.entries(diaAtivo.refeicoes).map(([key, options]) => (
+            <div key={key} className="meal-card">
+              <div className="meal-title">
+                {mealLabels[key] || key.replace(/_/g, ' ')}
+              </div>
+              <div className="meal-inputs-list">
+                {options.map((opt, oIdx) => (
+                  <input
+                    key={oIdx}
+                    type="text"
+                    value={opt}
+                    onChange={(e) => handleOptionChange(activeTab, key, oIdx, e.target.value)}
+                    placeholder={`Opção ${oIdx + 1}`}
+                    className="meal-input"
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

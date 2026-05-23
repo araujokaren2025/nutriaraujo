@@ -2,15 +2,10 @@ import { supabase } from '../lib/supabase.js'
 
 export const mealPlanService = {
   async gerarPlanoComIA(patientData) {
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gerar-plano`, {
+    const response = await fetch('/api/gerar-plano', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token}`,
-        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-        'x-gemini-key': import.meta.env.VITE_GEMINI_API_KEY
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ dados_do_paciente: patientData })
     });
