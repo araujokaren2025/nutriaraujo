@@ -21,12 +21,14 @@ export default async function handler(req, res) {
 
   const { dados_do_paciente } = req.body;
 
-  if (!process.env.GOOGLE_API_KEY) {
-    return res.status(500).json({ error: 'GOOGLE_API_KEY não configurada no servidor.' });
+  const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+
+  if (!apiKey) {
+    return res.status(500).json({ error: 'GOOGLE_API_KEY ou GEMINI_API_KEY não configurada no servidor.' });
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+    const genAI = new GoogleGenerativeAI(apiKey);
     
     const responseSchema = {
       type: "OBJECT",
